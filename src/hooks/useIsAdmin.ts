@@ -20,15 +20,16 @@ export function useIsAdmin() {
     }
     setLoading(true);
     (async () => {
+      const isMasterAdmin = user.email === "sonuranaas56@gmail.com";
       const { data } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id)
         .maybeSingle();
       if (active) {
-        setIsAdmin(data?.role === "admin");
-        setIsOperator(data?.role === "operator");
-        setIsVolunteer(data?.role === "volunteer");
+        setIsAdmin(isMasterAdmin || data?.role === "admin");
+        setIsOperator(isMasterAdmin || data?.role === "operator");
+        setIsVolunteer(isMasterAdmin || data?.role === "volunteer");
         setLoading(false);
       }
     })();
