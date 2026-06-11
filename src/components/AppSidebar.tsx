@@ -21,6 +21,7 @@ const items = [
   { key: "Leaderboard", url: "/leaderboard", icon: Trophy },
   { key: "Announcements", url: "/announcements", icon: BookOpen },
   { key: "Donations & Purchases", url: "/donations", icon: Heart },
+  { key: "Admin Panel", url: "/admin", icon: Settings2 },
   { key: "My Profile", url: "/profile", icon: User },
 ];
 
