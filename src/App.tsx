@@ -22,6 +22,7 @@ import Leaderboard from "./pages/Leaderboard";
 import EventsPanel from "./pages/EventsPanel";
 import AnnouncementsPanel from "./pages/AnnouncementsPanel";
 import AdminPanel from "./pages/AdminPanel";
+import DonationsPanel from "./pages/DonationsPanel";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +50,7 @@ const App = () => {
                   <Route path="/leaderboard" element={<Leaderboard />} />
                   <Route path="/events" element={<EventsPanel />} />
                   <Route path="/announcements" element={<AnnouncementsPanel />} />
+                  <Route path="/donations" element={<DonationsPanel />} />
                   <Route path="/admin" element={<AdminPanel />} />
                 </Route>
                 <Route path="*" element={<Navigate to="/" replace />} />
