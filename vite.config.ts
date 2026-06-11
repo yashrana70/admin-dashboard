@@ -6,6 +6,11 @@ import path from "path";
 export default defineConfig(({ mode }) => ({
   server: {
     port: 8081,
+    host: true,
+  },
+  preview: {
+    port: 8081,
+    host: true,
   },
   plugins: [react()],
   resolve: {

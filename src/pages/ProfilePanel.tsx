@@ -1,264 +1,246 @@
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ChevronRight, ChevronDown, UserCircle, Users, Pencil } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Camera, Upload, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-type NodeData = {
-  id: string;
-  name: string;
-  parent_id: string | null;
-  role: string;
-};
+type Sibling = { name: string; dob: string };
 
-const HierarchyNode = ({ 
-  node, 
-  nodesMap, 
-  level = 0, 
-  onEdit 
-}: { 
-  node: NodeData, 
-  nodesMap: Record<string, NodeData[]>, 
-  level?: number,
-  onEdit: (node: NodeData) => void 
-}) => {
-  const [expanded, setExpanded] = useState(false);
-  const children = nodesMap[node.id] || [];
-  
-  useEffect(() => {
-    if (level === 0) setExpanded(true);
-  }, [level]);
-
-  const roleColors: Record<string, string> = {
-    admin: "text-red-600 bg-red-100",
-    operator: "text-purple-600 bg-purple-100",
-    volunteer: "text-blue-600 bg-blue-100",
-    devotee: "text-green-600 bg-green-100",
-  };
-
-  return (
-    <div className="mt-2 select-none">
-      <div 
-        className={`flex items-center p-3 rounded-lg border transition-colors ${level === 0 ? "bg-muted/20 hover:bg-muted/30" : "bg-card hover:bg-muted/50"}`}
-        style={{ marginLeft: `${level * 24}px` }}
-      >
-        <div 
-          className="w-6 flex items-center justify-center mr-2 text-muted-foreground cursor-pointer"
-          onClick={() => setExpanded(!expanded)}
-        >
-          {children.length > 0 ? (expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />) : <span className="w-4" />}
-        </div>
-        
-        {node.role === 'devotee' ? <UserCircle className="h-5 w-5 mr-3 text-muted-foreground" /> : <Users className="h-5 w-5 mr-3 text-primary" />}
-        
-        <div className="flex-1 cursor-pointer" onClick={() => setExpanded(!expanded)}>
-          <div className="font-medium text-foreground">{node.name}</div>
-          <div className="text-xs text-muted-foreground">{children.length} assigned members</div>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <div className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${roleColors[node.role] || "text-gray-600 bg-gray-100"}`}>
-            {node.role}
-          </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => onEdit(node)}>
-            <Pencil className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-      
-      {expanded && children.length > 0 && (
-        <div className="mt-1 animate-in fade-in slide-in-from-top-2 duration-200">
-          {children.map(child => (
-            <HierarchyNode key={child.id} node={child} nodesMap={nodesMap} level={level + 1} onEdit={onEdit} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default function ProfilePanel() {
+export default function Profile() {
   const { user } = useAuth();
-  const [nodesMap, setNodesMap] = useState<Record<string, NodeData[]>>({});
-  const [rootNodes, setRootNodes] = useState<NodeData[]>([]);
-  const [allNodes, setAllNodes] = useState<NodeData[]>([]);
-  
-  // Edit State
-  const [editingNode, setEditingNode] = useState<NodeData | null>(null);
-  const [editRole, setEditRole] = useState<string>("");
-  const [editParentId, setEditParentId] = useState<string>("none");
-  const [isSaving, setIsSaving] = useState(false);
-
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.rpc("get_hierarchy_tree");
-      if (error) throw error;
-      
-      if (data) {
-        const nodes: NodeData[] = data.map(d => ({
-          id: d.id,
-          name: d.name || "Unknown",
-          parent_id: d.parent_id,
-          role: d.role || "devotee"
-        }));
-        
-        setAllNodes(nodes);
-
-        const map: Record<string, NodeData[]> = {};
-        const roots: NodeData[] = [];
-        const allIds = new Set(nodes.map(n => n.id));
-        
-        nodes.forEach(n => {
-          if (n.parent_id && allIds.has(n.parent_id)) {
-            if (!map[n.parent_id]) map[n.parent_id] = [];
-            map[n.parent_id].push(n);
-          } else {
-            roots.push(n);
-          }
-        });
-
-        setNodesMap(map);
-        setRootNodes(roots);
-      }
-    } catch (err: any) {
-      console.error(err);
-      toast.error("Failed to load hierarchy data: " + err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [p, setP] = useState({
+    full_name: "", email: "", phone: "", whatsapp: "",
+    spiritual_friend_name: "", gender: "", dob: "",
+    education: "", profession: "", marital_status: "", address: "",
+    devotee_level: "", facilitator_name: "", photo_url: "",
+    bhakti_vriksha_level: "" as string,
+    spiritual_background: "", joined_iskcon_date: "",
+    iskcon_intro_source: "", started_japa_date: "", diksha_date: "",
+    saksham_seva_start_date: "", saksham_vision: "",
+  });
+  const [family, setFamily] = useState({
+    father: { name: "", occupation: "", dob: "" },
+    mother: { name: "", occupation: "", dob: "" },
+    siblings: [] as Sibling[],
+  });
 
   useEffect(() => {
-    if (user) loadData();
+    if (!user) return;
+    (async () => {
+      const { data } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+      if (data) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const d: any = data;
+        setP({
+          full_name: d.full_name || "", email: d.email || "", phone: d.phone || "",
+          whatsapp: d.whatsapp || "", spiritual_friend_name: d.spiritual_friend_name || "",
+          gender: d.gender || "", dob: d.dob || "", education: d.education || "",
+          profession: d.profession || "", marital_status: d.marital_status || "",
+          address: d.address || "", devotee_level: d.devotee_level || "",
+          facilitator_name: d.facilitator_name || "", photo_url: d.photo_url || "",
+          bhakti_vriksha_level: d.bhakti_vriksha_level ? String(d.bhakti_vriksha_level) : "",
+          spiritual_background: d.spiritual_background || "", joined_iskcon_date: d.joined_iskcon_date || "",
+          iskcon_intro_source: d.iskcon_intro_source || "", started_japa_date: d.started_japa_date || "",
+          diksha_date: d.diksha_date || "", saksham_seva_start_date: d.saksham_seva_start_date || "",
+          saksham_vision: d.saksham_vision || "",
+        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const fam = (d.family as any) || {};
+        setFamily({
+          father: fam.father || { name:"", occupation:"", dob:"" },
+          mother: fam.mother || { name:"", occupation:"", dob:"" },
+          siblings: fam.siblings || [],
+        });
+      }
+      setLoading(false);
+    })();
   }, [user]);
 
-  const handleEditClick = (node: NodeData) => {
-    setEditingNode(node);
-    setEditRole(node.role);
-    setEditParentId(node.parent_id || "none");
+  const uploadPhoto = async (file: File) => {
+    if (!user) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error("Image too large (max 5MB)"); return; }
+    const ext = file.name.split(".").pop();
+    const path = `${user.id}/avatar-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("profile-photos").upload(path, file, { upsert: true });
+    if (error) { toast.error(error.message); return; }
+    const { data } = supabase.storage.from("profile-photos").getPublicUrl(path);
+    setP(prev => ({ ...prev, photo_url: data.publicUrl }));
+    await supabase.from("profiles").update({ photo_url: data.publicUrl }).eq("id", user.id);
+    toast.success("Photo uploaded and saved! 🙏");
   };
 
-  const handleSave = async () => {
-    if (!editingNode) return;
-    setIsSaving(true);
-    
-    try {
-      // Update Role in user_roles
-      if (editRole !== editingNode.role) {
-        if (editRole === "devotee") {
-          // Devotees shouldn't be in user_roles table usually, or we can just delete/update
-          await supabase.from("user_roles").delete().eq("user_id", editingNode.id);
-        } else {
-          const { error: roleErr } = await supabase.from("user_roles").upsert({
-            user_id: editingNode.id,
-            role: editRole as any
-          }, { onConflict: "user_id" });
-          if (roleErr) throw roleErr;
-        }
-      }
-
-      // Update Parent in profiles
-      const newParent = editParentId === "none" ? null : editParentId;
-      if (newParent !== editingNode.parent_id) {
-        const { error: profErr } = await supabase.from("profiles").update({
-          parent_id: newParent,
-          assigned_mentor: newParent ? allNodes.find(n => n.id === newParent)?.name : null
-        }).eq("id", editingNode.id);
-        if (profErr) throw profErr;
-      }
-
-      toast.success(`${editingNode.name} updated successfully!`);
-      setEditingNode(null);
-      loadData();
-    } catch (e: any) {
-      toast.error(e.message || "Failed to save changes");
-    } finally {
-      setIsSaving(false);
-    }
+  const save = async () => {
+    if (!user) return;
+    setSaving(true);
+    const { error } = await supabase.from("profiles").update({
+      ...p,
+      dob: p.dob || null,
+      joined_iskcon_date: p.joined_iskcon_date || null,
+      started_japa_date: p.started_japa_date || null,
+      diksha_date: p.diksha_date || null,
+      saksham_seva_start_date: p.saksham_seva_start_date || null,
+      bhakti_vriksha_level: p.bhakti_vriksha_level ? Number(p.bhakti_vriksha_level) : null,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      family: family as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any).eq("id", user.id);
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Profile saved 🙏");
   };
 
-  // Potential parents are everyone except the editing user and their downline (to prevent cycles)
-  // For simplicity, we just filter out the editing user.
-  const potentialParents = allNodes.filter(n => n.id !== editingNode?.id && ["admin", "operator", "volunteer", "facilitator"].includes(n.role));
+  if (loading) return <div className="text-muted-foreground">Loading…</div>;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-serif text-primary">Hierarchy & Profiles</h1>
+      <div>
+        <h1 className="font-serif text-3xl">My Profile</h1>
+        <p className="text-muted-foreground text-sm">Keep your devotee details up to date</p>
       </div>
-      
-      <Card className="shadow-elegant border-primary/10">
-        <CardHeader className="bg-primary/5 rounded-t-xl border-b border-primary/10 pb-4">
-          <CardTitle className="font-serif">Interactive Downline Tree</CardTitle>
-          <CardDescription>Click the edit icon to change roles and assign devotees under leaders.</CardDescription>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <div className="min-h-[400px]">
-            {loading ? (
-              <div className="text-center py-10 text-muted-foreground">Loading tree...</div>
-            ) : rootNodes.length === 0 ? (
-              <div className="text-center py-10 text-muted-foreground">No hierarchy data found.</div>
-            ) : (
-              rootNodes.map(root => (
-                <HierarchyNode key={root.id} node={root} nodesMap={nodesMap} onEdit={handleEditClick} />
-              ))
-            )}
+
+      <Card>
+        <CardHeader><CardTitle className="font-serif">Profile Photo</CardTitle></CardHeader>
+        <CardContent className="flex items-center gap-6">
+          <Avatar className="h-24 w-24 ring-2 ring-primary/30">
+            <AvatarImage src={p.photo_url} />
+            <AvatarFallback className="bg-gradient-primary text-primary-foreground text-2xl font-serif">
+              {p.full_name?.[0] || "D"}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col gap-2">
+            <input ref={fileRef} type="file" accept="image/*" hidden
+              onChange={e => e.target.files?.[0] && uploadPhoto(e.target.files[0])} />
+            <input ref={cameraRef} type="file" accept="image/*" capture="user" hidden
+              onChange={e => e.target.files?.[0] && uploadPhoto(e.target.files[0])} />
+            <Button variant="outline" onClick={() => cameraRef.current?.click()}>
+              <Camera className="h-4 w-4 mr-2" /> Take Photo
+            </Button>
+            <Button variant="outline" onClick={() => fileRef.current?.click()}>
+              <Upload className="h-4 w-4 mr-2" /> Upload from Gallery
+            </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Edit Dialog */}
-      <Dialog open={!!editingNode} onOpenChange={(o) => !o && setEditingNode(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="font-serif text-xl">Edit {editingNode?.name}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Assigned Role</Label>
-              <Select value={editRole} onValueChange={setEditRole}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="operator">Operator</SelectItem>
-                  <SelectItem value="volunteer">Volunteer</SelectItem>
-                  <SelectItem value="devotee">Devotee</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">Admins see all. Operators see Volunteers. Volunteers see Devotees.</p>
-            </div>
+      <Card>
+        <CardHeader><CardTitle className="font-serif">Personal Details</CardTitle></CardHeader>
+        <CardContent className="grid md:grid-cols-2 gap-4">
+          <div><Label>Full Name</Label><Input value={p.full_name} onChange={e => setP({...p, full_name: e.target.value})} /></div>
+          <div><Label>Spiritual Friend Name</Label><Input value={p.spiritual_friend_name} onChange={e => setP({...p, spiritual_friend_name: e.target.value})} /></div>
+          <div><Label>Email</Label><Input value={p.email} disabled /></div>
+          <div><Label>Phone</Label><Input value={p.phone} onChange={e => setP({...p, phone: e.target.value})} /></div>
+          <div><Label>WhatsApp</Label><Input value={p.whatsapp} onChange={e => setP({...p, whatsapp: e.target.value})} /></div>
+          <div><Label>Gender</Label>
+            <Select value={p.gender} onValueChange={v => setP({...p, gender: v})}>
+              <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="male">Male</SelectItem>
+                <SelectItem value="female">Female</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div><Label>Date of Birth</Label><Input type="date" value={p.dob} onChange={e => setP({...p, dob: e.target.value})} /></div>
+          <div><Label>Marital Status</Label>
+            <Select value={p.marital_status} onValueChange={v => setP({...p, marital_status: v})}>
+              <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="single">Single</SelectItem>
+                <SelectItem value="married">Married</SelectItem>
+                <SelectItem value="brahmachari">Brahmachari</SelectItem>
+                <SelectItem value="sannyasi">Sannyasi</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div><Label>Qualification (Education)</Label><Input value={p.education} onChange={e => setP({...p, education: e.target.value})} /></div>
+          <div><Label>Profession (optional)</Label><Input value={p.profession} onChange={e => setP({...p, profession: e.target.value})} /></div>
+          <div><Label>Devotee Level</Label><Input value={p.devotee_level} onChange={e => setP({...p, devotee_level: e.target.value})} /></div>
+          <div><Label>Bhakti Vriksha Level</Label>
+            <Select value={p.bhakti_vriksha_level} onValueChange={v => setP({...p, bhakti_vriksha_level: v})}>
+              <SelectTrigger><SelectValue placeholder="Select level (sets target rounds)" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">Level 1 — Target 2 rounds</SelectItem>
+                <SelectItem value="2">Level 2 — Target 4 rounds</SelectItem>
+                <SelectItem value="3">Level 3 — Target 8 rounds</SelectItem>
+                <SelectItem value="4">Level 4 — Target 16 rounds</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div><Label>Counselor / Under Guidance</Label><Input value={p.facilitator_name} onChange={e => setP({...p, facilitator_name: e.target.value})} /></div>
+          <div className="md:col-span-2"><Label>Full Address</Label>
+            <Textarea value={p.address} onChange={e => setP({...p, address: e.target.value})} rows={3} /></div>
+        </CardContent>
+      </Card>
 
+      <Card>
+        <CardHeader><CardTitle className="font-serif">Spiritual Journey</CardTitle></CardHeader>
+        <CardContent className="grid md:grid-cols-2 gap-4">
+          <div className="md:col-span-2"><Label>Spiritual Background</Label><Textarea value={p.spiritual_background} onChange={e => setP({...p, spiritual_background: e.target.value})} rows={2} /></div>
+          <div><Label>Date Joining ISKCON</Label><Input type="date" value={p.joined_iskcon_date} onChange={e => setP({...p, joined_iskcon_date: e.target.value})} /></div>
+          <div className="md:col-span-2"><Label>How did you know about ISKCON (in short)?</Label><Textarea value={p.iskcon_intro_source} onChange={e => setP({...p, iskcon_intro_source: e.target.value})} rows={2} /></div>
+          <div><Label>Started Japa (Date)</Label><Input type="date" value={p.started_japa_date} onChange={e => setP({...p, started_japa_date: e.target.value})} /></div>
+          <div><Label>Diksha Date (optional)</Label><Input type="date" value={p.diksha_date} onChange={e => setP({...p, diksha_date: e.target.value})} /></div>
+          <div><Label>Date started Seva in Saksham</Label><Input type="date" value={p.saksham_seva_start_date} onChange={e => setP({...p, saksham_seva_start_date: e.target.value})} /></div>
+          <div className="md:col-span-2"><Label>What is your Vision & Mission about Saksham?</Label><Textarea value={p.saksham_vision} onChange={e => setP({...p, saksham_vision: e.target.value})} rows={3} /></div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle className="font-serif">Family Details</CardTitle></CardHeader>
+        <CardContent className="space-y-6">
+          {(["father","mother"] as const).map(key => (
+            <div key={key}>
+              <h4 className="font-semibold capitalize mb-2">{key}</h4>
+              <div className="grid md:grid-cols-3 gap-3">
+                <Input placeholder="Name" value={family[key].name}
+                  onChange={e => setFamily({...family, [key]: {...family[key], name: e.target.value}})} />
+                <Input placeholder="Occupation" value={family[key].occupation}
+                  onChange={e => setFamily({...family, [key]: {...family[key], occupation: e.target.value}})} />
+                <Input type="date" value={family[key].dob}
+                  onChange={e => setFamily({...family, [key]: {...family[key], dob: e.target.value}})} />
+              </div>
+            </div>
+          ))}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="font-semibold">Siblings</h4>
+              <Button size="sm" variant="outline" onClick={() => setFamily({...family, siblings: [...family.siblings, {name:"",dob:""}]})}>
+                <Plus className="h-4 w-4 mr-1" /> Add
+              </Button>
+            </div>
             <div className="space-y-2">
-              <Label>Assigned Under (Parent)</Label>
-              <Select value={editParentId} onValueChange={setEditParentId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a leader" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">-- No Parent (Root) --</SelectItem>
-                  {potentialParents.map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.name} ({p.role})</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {family.siblings.map((s, i) => (
+                <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-2">
+                  <Input placeholder="Name" value={s.name}
+                    onChange={e => { const sib=[...family.siblings]; sib[i]={...sib[i], name:e.target.value}; setFamily({...family, siblings:sib}); }} />
+                  <Input type="date" value={s.dob}
+                    onChange={e => { const sib=[...family.siblings]; sib[i]={...sib[i], dob:e.target.value}; setFamily({...family, siblings:sib}); }} />
+                  <Button variant="ghost" size="icon" onClick={() => setFamily({...family, siblings: family.siblings.filter((_,j)=>j!==i)})}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              {family.siblings.length === 0 && <p className="text-sm text-muted-foreground">No siblings added.</p>}
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingNode(null)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={isSaving}>{isSaving ? "Saving..." : "Save Changes"}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </CardContent>
+      </Card>
+
+      <Button onClick={save} disabled={saving} size="lg" className="bg-gradient-primary text-primary-foreground">
+        {saving ? "Saving…" : "Save Profile"}
+      </Button>
     </div>
   );
 }

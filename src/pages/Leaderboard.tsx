@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trophy, Medal, Award } from "lucide-react";
 
 type Row = { user_id: string; name: string; tasks_completed: number; score: number };
+type TaskRecord = { assigned_to: string };
+type ProfileRecord = { id: string; full_name?: string; email?: string };
 
 export default function Leaderboard() {
   const [rows, setRows] = useState<Row[]>([]);
@@ -13,16 +15,16 @@ export default function Leaderboard() {
     (async () => {
       // Fetch completed seva tasks and profiles to compute Leaderboard
       const [{ data: tasks }, { data: profiles }] = await Promise.all([
-        supabase.from("seva_tasks").select("assigned_to").eq("status", "completed"),
-        supabase.from("profiles").select("id, full_name, email")
+        supabase.from<TaskRecord>("seva_tasks").select("assigned_to").eq("status", "completed"),
+        supabase.from<ProfileRecord>("profiles").select("id, full_name, email")
       ]);
 
       const counts: Record<string, number> = {};
-      tasks?.forEach((t: any) => {
+      tasks?.forEach((t: TaskRecord) => {
         counts[t.assigned_to] = (counts[t.assigned_to] || 0) + 1;
       });
 
-      const arr: Row[] = profiles?.map(p => ({
+      const arr: Row[] = (profiles || []).map((p: ProfileRecord) => ({
         user_id: p.id,
         name: p.full_name || p.email || "Devotee",
         tasks_completed: counts[p.id] || 0,

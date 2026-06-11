@@ -17,8 +17,11 @@ import SadhnaPanel from "./pages/SadhnaPanel";
 import SevaPanel from "./pages/SevaPanel";
 import UsersPanel from "./pages/UsersPanel";
 import AttendancePanel from "./pages/AttendancePanel";
+import AttendanceAnalytics from "./pages/AttendanceAnalytics";
 import Leaderboard from "./pages/Leaderboard";
 import EventsPanel from "./pages/EventsPanel";
+import AnnouncementsPanel from "./pages/AnnouncementsPanel";
+import AdminPanel from "./pages/AdminPanel";
 
 const queryClient = new QueryClient();
 
@@ -30,7 +33,7 @@ const App = () => {
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter>
+          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <AuthProvider>
               <Routes>
                 <Route path="/auth" element={<Auth />} />
@@ -39,11 +42,14 @@ const App = () => {
                   <Route path="/" element={<DashboardHome />} />
                   <Route path="/profile" element={<ProfilePanel />} />
                   <Route path="/attendance" element={<AttendancePanel />} />
+                  <Route path="/attendance-analytics" element={<AttendanceAnalytics />} />
                   <Route path="/sadhna" element={<SadhnaPanel />} />
                   <Route path="/seva" element={<SevaPanel />} />
                   <Route path="/users" element={<UsersPanel />} />
                   <Route path="/leaderboard" element={<Leaderboard />} />
                   <Route path="/events" element={<EventsPanel />} />
+                  <Route path="/announcements" element={<AnnouncementsPanel />} />
+                  <Route path="/admin" element={<AdminPanel />} />
                 </Route>
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>

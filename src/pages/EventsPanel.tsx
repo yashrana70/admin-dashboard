@@ -12,9 +12,17 @@ import { useAuth } from "@/lib/auth";
 import { Plus, Pencil, Trash2, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 
+type VaishnavEvent = {
+  id: string;
+  title: string;
+  event_date: string;
+  event_type: string | null;
+  description: string | null;
+};
+
 export default function EventsPanel() {
   const { user } = useAuth();
-  const [events, setEvents] = useState<any[]>([]);
+  const [events, setEvents] = useState<VaishnavEvent[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
@@ -26,7 +34,7 @@ export default function EventsPanel() {
   const [description, setDescription] = useState("");
 
   const loadEvents = async () => {
-    const { data } = await supabase.from("vaishnav_events")
+    const { data } = await supabase.from<VaishnavEvent>("vaishnav_events")
       .select("*")
       .order("event_date", { ascending: true });
     if (data) setEvents(data);
@@ -35,7 +43,7 @@ export default function EventsPanel() {
   useEffect(() => {
     if (user?.email === "sonuranaas56@gmail.com") setIsAdmin(true);
     else {
-      supabase.from("user_roles").select("role").eq("user_id", user?.id || "").maybeSingle().then(({ data }) => {
+      supabase.from<{ role: string }>("user_roles").select("role").eq("user_id", user?.id || "").maybeSingle().then(({ data }) => {
         if (data?.role === "admin") setIsAdmin(true);
       });
     }
@@ -51,7 +59,7 @@ export default function EventsPanel() {
     setIsDialogOpen(true);
   };
 
-  const openEdit = (e: any) => {
+  const openEdit = (e: VaishnavEvent) => {
     setEditingId(e.id);
     setTitle(e.title);
     setEventDate(e.event_date);
@@ -73,8 +81,9 @@ export default function EventsPanel() {
       }
       setIsDialogOpen(false);
       loadEvents();
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to save event";
+      toast.error(message);
     }
   };
 
@@ -84,8 +93,9 @@ export default function EventsPanel() {
       await supabase.from("vaishnav_events").delete().eq("id", id);
       toast.success("Event deleted");
       loadEvents();
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to delete event";
+      toast.error(message);
     }
   };
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -12,10 +12,30 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Plus, CheckCircle2, Circle, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { differenceInDays, parseISO } from "date-fns";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+
+type SevaTask = {
+  id: string;
+  title: string;
+  description?: string | null;
+  assigned_to: string;
+  assigned_by: string;
+  due_date?: string | null;
+  status: string;
+  created_at: string;
+  completed_at?: string | null;
+};
+
+type DevoteeProfile = {
+  id: string;
+  full_name?: string | null;
+  email?: string | null;
+};
 
 export default function SevaPanel() {
   const { user } = useAuth();
-  const [tasks, setTasks] = useState<any[]>([]);
+  const { isAdmin, isStaff } = useIsAdmin();
+  const [tasks, setTasks] = useState<SevaTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
@@ -25,35 +45,31 @@ export default function SevaPanel() {
   const [assignedTo, setAssignedTo] = useState("");
   const [dueDate, setDueDate] = useState("");
   
-  const [myRole, setMyRole] = useState("devotee");
-  const [downline, setDownline] = useState<any[]>([]);
+  const [downline, setDownline] = useState<DevoteeProfile[]>([]);
   const [profilesMap, setProfilesMap] = useState<Record<string, string>>({});
 
-  const loadData = async () => {
-    if (!user) return;
+  const loadData = useCallback(async () => {
+    if (!user || !isStaff) return;
     setLoading(true);
     try {
-      let isAdmin = user.email === "sonuranaas56@gmail.com";
-      const { data: roleData } = await supabase.from("user_roles").select("role").eq("user_id", user.id).maybeSingle();
-      if (roleData) {
-        setMyRole(roleData.role);
-        if (roleData.role === "admin") isAdmin = true;
-      }
-      if (isAdmin) setMyRole("admin");
-
       // Load all profiles to map IDs to Names
       const { data: allProfiles } = await supabase.from("profiles").select("id, full_name, email");
       const pMap: Record<string, string> = {};
       allProfiles?.forEach(p => { pMap[p.id] = p.full_name || p.email || "Unknown User"; });
       setProfilesMap(pMap);
 
+      let allowedTaskIds: string[] = [];
+
       // Load Downline for assignment dropdown
       if (isAdmin) {
         setDownline(allProfiles || []);
       } else {
-        const { data: dl } = await supabase.rpc("get_downline_ids", { _root: user.id });
+        const { data: dl, error: rpcError } = await supabase.rpc("get_downline_ids", { _root: user.id });
+        if (rpcError) throw rpcError;
+        
         if (dl) {
           const dlIds = dl.map((d: any) => d.user_id);
+          allowedTaskIds = [...dlIds, user.id]; // including self
           const dlProfiles = allProfiles?.filter(p => dlIds.includes(p.id)) || [];
           setDownline(dlProfiles);
         }
@@ -62,23 +78,31 @@ export default function SevaPanel() {
       let query = supabase.from("seva_tasks").select("*").order("created_at", { ascending: false });
       
       if (!isAdmin) {
-        // Operator/Volunteer sees tasks assigned TO them, or BY them.
-        query = query.or(`assigned_to.eq.${user.id},assigned_by.eq.${user.id}`);
+        // Operator/Volunteer sees tasks assigned TO them, or BY them, or assigned TO their downline
+        if (allowedTaskIds.length > 0) {
+          query = query.or(`assigned_to.in.(${allowedTaskIds.join(',')}),assigned_by.eq.${user.id}`);
+        } else {
+          query = query.or(`assigned_to.eq.${user.id},assigned_by.eq.${user.id}`);
+        }
       }
       
-      const { data: tasksData } = await query;
+      const { data: tasksData, error: taskError } = await query;
+      if (taskError) throw taskError;
       if (tasksData) setTasks(tasksData);
 
-    } catch (err) {
+    } catch (err: unknown) {
+      toast.error(err.message || "Failed to load Seva tasks");
       console.error(err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [isAdmin, isStaff, user]);
 
   useEffect(() => {
-    loadData();
-  }, [user]);
+    if (user && isStaff) {
+      loadData();
+    }
+  }, [user, isStaff, loadData]);
 
   const handleCreateTask = async () => {
     if (!title || !assignedTo) {
@@ -126,7 +150,7 @@ export default function SevaPanel() {
   };
 
   const renderAnalytics = () => {
-    if (myRole !== "admin") return null;
+    if (!isAdmin) return null;
     const total = tasks.length;
     const completed = tasks.filter(t => t.status === "completed").length;
     const pending = total - completed;
@@ -153,7 +177,7 @@ export default function SevaPanel() {
           <h1 className="text-3xl font-serif text-primary">Seva Tracking</h1>
           <p className="text-muted-foreground mt-1">Assign tasks and track completion metrics.</p>
         </div>
-        {["admin", "operator"].includes(myRole) && (
+        {isStaff && (
           <Button onClick={() => setIsDialogOpen(true)} className="gap-2">
             <Plus className="h-4 w-4" /> Delegate Task
           </Button>

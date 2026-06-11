@@ -69,7 +69,7 @@ export default function AartiLibrary() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input value={q} onChange={e => setQ(e.target.value)} placeholder={t("search")} className="pl-9" />
         </div>
-        <Tabs value={cat} onValueChange={(v) => setCat(v as any)}>
+        <Tabs value={cat} onValueChange={(v: typeof CATS[number]) => setCat(v)}>
           <TabsList className="flex-wrap h-auto">
             {CATS.map(c => (
               <TabsTrigger key={c} value={c} className="capitalize">{t(c === "all" ? "all" : c)}</TabsTrigger>

@@ -11,7 +11,30 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Camera, Upload, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-type Sibling = { name: string; dob: string };
+type Sibling = { name: string; occupation?: string; dob: string };
+type FamilyData = {
+  father: Sibling;
+  mother: Sibling;
+  siblings: Sibling[];
+};
+type ProfileData = {
+  full_name?: string;
+  email?: string;
+  phone?: string;
+  whatsapp?: string;
+  spiritual_friend_name?: string;
+  gender?: string;
+  dob?: string;
+  education?: string;
+  profession?: string;
+  marital_status?: string;
+  address?: string;
+  devotee_level?: string;
+  facilitator_name?: string;
+  photo_url?: string;
+  bhakti_vriksha_level?: number | string;
+  family?: FamilyData;
+};
 
 export default function Profile() {
   const { user } = useAuth();
@@ -36,19 +59,18 @@ export default function Profile() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+      const { data } = await supabase.from<ProfileData>("profiles").select("*").eq("id", user.id).maybeSingle();
       if (data) {
-        const d: any = data;
         setP({
-          full_name: d.full_name || "", email: d.email || "", phone: d.phone || "",
-          whatsapp: d.whatsapp || "", spiritual_friend_name: d.spiritual_friend_name || "",
-          gender: d.gender || "", dob: d.dob || "", education: d.education || "",
-          profession: d.profession || "", marital_status: d.marital_status || "",
-          address: d.address || "", devotee_level: d.devotee_level || "",
-          facilitator_name: d.facilitator_name || "", photo_url: d.photo_url || "",
-          bhakti_vriksha_level: d.bhakti_vriksha_level ? String(d.bhakti_vriksha_level) : "",
+          full_name: data.full_name || "", email: data.email || "", phone: data.phone || "",
+          whatsapp: data.whatsapp || "", spiritual_friend_name: data.spiritual_friend_name || "",
+          gender: data.gender || "", dob: data.dob || "", education: data.education || "",
+          profession: data.profession || "", marital_status: data.marital_status || "",
+          address: data.address || "", devotee_level: data.devotee_level || "",
+          facilitator_name: data.facilitator_name || "", photo_url: data.photo_url || "",
+          bhakti_vriksha_level: data.bhakti_vriksha_level ? String(data.bhakti_vriksha_level) : "",
         });
-        const fam = (d.family as any) || {};
+        const fam = data.family || {};
         setFamily({
           father: fam.father || { name:"", occupation:"", dob:"" },
           mother: fam.mother || { name:"", occupation:"", dob:"" },
@@ -74,12 +96,12 @@ export default function Profile() {
   const save = async () => {
     if (!user) return;
     setSaving(true);
-    const { error } = await supabase.from("profiles").update({
+    const { error } = await supabase.from<ProfileData>("profiles").update({
       ...p,
       dob: p.dob || null,
       bhakti_vriksha_level: p.bhakti_vriksha_level ? Number(p.bhakti_vriksha_level) : null,
-      family: family as any,
-    } as any).eq("id", user.id);
+      family,
+    }).eq("id", user.id);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Profile saved 🙏");

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,14 +46,14 @@ export default function SadhnaCalendar() {
     facilitator_name: "",
   });
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase.from("sadhna_entries")
       .select("*").eq("user_id", user.id).order("entry_date", { ascending: false });
-    setEntries((data as any) || []);
-  };
+    setEntries((data as Entry[]) || []);
+  }, [user]);
 
-  useEffect(() => { load(); }, [user]);
+  useEffect(() => { load(); }, [load]);
 
   const filledDates = useMemo(
     () => new Set(entries.map(e => e.entry_date)),

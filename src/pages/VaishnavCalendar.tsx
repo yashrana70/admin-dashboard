@@ -35,7 +35,7 @@ export default function VaishnavCalendar() {
     (async () => {
       const { data } = await supabase.from("vaishnav_events")
         .select("*").order("event_date");
-      const list = (data as any[]) || [];
+      const list = (data as Event[]) || [];
       setEvents(list);
 
       // popup reminder for events 1–2 days away (only once per session per event)
@@ -63,9 +63,11 @@ export default function VaishnavCalendar() {
   const eventsByDate = useMemo(() => {
     const m = new Map<string, Event[]>();
     events.forEach(e => {
-      const arr = m.get(e.event_date) || [];
+      // Normalize the date to YYYY-MM-DD to avoid timezone shifting issues and exact string mismatch
+      const dateKey = e.event_date.split('T')[0]; 
+      const arr = m.get(dateKey) || [];
       arr.push(e);
-      m.set(e.event_date, arr);
+      m.set(dateKey, arr);
     });
     return m;
   }, [events]);
@@ -85,7 +87,7 @@ export default function VaishnavCalendar() {
           <h1 className="font-serif text-3xl flex items-center gap-2">
             <CalendarDays className="h-7 w-7 text-primary" /> Vaishnav Calendar
           </h1>
-          <p className="text-muted-foreground text-sm">Ekadashis, festivals & appearance days · 2026</p>
+          <p className="text-muted-foreground text-sm">Ekadashis, festivals & appearance days · {new Date().getFullYear()}</p>
         </div>
         <Badge variant="outline" className="gap-1.5"><Bell className="h-3 w-3" /> Reminders 1–2 days before</Badge>
       </div>

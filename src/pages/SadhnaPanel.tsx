@@ -4,48 +4,54 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2 } from "lucide-react";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+
+type SadhnaReport = {
+  id: string;
+  devotee_name: string;
+  entry_date: string;
+  japa_rounds: number;
+  reading_minutes: number | null;
+  hearing_minutes: number | null;
+  total_marks: number;
+};
 
 export default function SadhnaPanel() {
   const { user } = useAuth();
-  const [reports, setReports] = useState<any[]>([]);
+  const { isAdmin, isStaff } = useIsAdmin();
+  const [reports, setReports] = useState<SadhnaReport[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !isStaff) return;
     (async () => {
       setLoading(true);
       try {
-        let isAdmin = user.email === "sonuranaas56@gmail.com";
-        if (!isAdmin) {
-          const { data: roleData } = await supabase.from("user_roles").select("role").eq("user_id", user.id).maybeSingle();
-          if (roleData?.role === "admin") isAdmin = true;
-        }
-
         let query = supabase.from("sadhna_entries").select("*").order("entry_date", { ascending: false }).limit(200);
 
         if (!isAdmin) {
-          // If not admin, they are operator/volunteer. Fetch downline IDs
-          const { data: downline } = await supabase.rpc("get_downline_ids", { _root: user.id });
+          const { data: downline, error: rpcError } = await supabase.rpc("get_downline_ids", { _root: user.id });
+          if (rpcError) throw rpcError;
+
           if (downline && downline.length > 0) {
-            const downlineIds = downline.map((d: any) => d.user_id);
-            // Include themselves as well
+            const downlineIds = downline.map((d) => d.user_id);
             downlineIds.push(user.id);
             query = query.in("user_id", downlineIds);
           } else {
-            // No downline, only show themselves
             query = query.eq("user_id", user.id);
           }
         }
 
-        const { data } = await query;
+        const { data, error } = await query;
+        if (error) throw error;
         if (data) setReports(data);
-      } catch (err) {
+      } catch (err: unknown) {
         console.error(err);
       } finally {
         setLoading(false);
       }
     })();
-  }, [user]);
+  }, [user, isAdmin, isStaff]);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">

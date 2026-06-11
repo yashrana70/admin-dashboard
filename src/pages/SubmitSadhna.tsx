@@ -316,8 +316,15 @@ Daily Sadhana: ${new Date(f.entry_date).toLocaleDateString("en-IN")}
     setTimeout(() => setCopied(false), 1500);
   };
   const nativeShare = async () => {
-    if (navigator.share) { try { await navigator.share({ title: "Saksham Sadhna", text: shareText() }); } catch {} }
-    else copyLink();
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Saksham Sadhna", text: shareText() });
+      } catch (shareError) {
+        console.warn("Native share failed or was cancelled", shareError);
+      }
+    } else {
+      copyLink();
+    }
   };
 
   return (

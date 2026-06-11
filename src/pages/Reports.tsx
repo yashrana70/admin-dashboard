@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ElementType } from "react";
 import { useAuth } from "@/lib/auth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,7 +26,14 @@ type Entry = {
   notes: string | null;
 };
 
-const StatCard = ({ icon: Icon, label, value, hint }: any) => (
+type StatCardProps = {
+  icon: React.ElementType;
+  label: string;
+  value: string | number;
+  hint?: string;
+};
+
+const StatCard = ({ icon: Icon, label, value, hint }: StatCardProps) => (
   <Card className="shadow-soft hover:shadow-elegant transition-shadow">
     <CardContent className="p-5 flex items-center gap-4">
       <div className="h-12 w-12 rounded-xl bg-gradient-primary text-primary-foreground grid place-items-center shadow-soft">
@@ -54,9 +61,12 @@ export default function Reports() {
       setLoading(true);
       const { data } = await supabase.from("sadhna_entries")
         .select("*").eq("user_id", user.id).order("entry_date", { ascending: false });
-      setEntries((data as any) || []);
+      setEntries((data as Entry[]) || []);
       setLoading(false);
-    })();
+    })().catch((error) => {
+      console.error(error);
+      setLoading(false);
+    });
   }, [user]);
 
   // ----- Daily (last 14 days) chart -----
@@ -126,7 +136,7 @@ export default function Reports() {
       "Date", "Devotee", "Japa Rounds", "Hearing (min)", "Hearing Topic",
       "Reading (min)", "Reading Topic", "Seva (min)", "Facilitator", "Notes",
     ];
-    const escape = (v: any) => {
+    const escape = (v: unknown) => {
       const s = v === null || v === undefined ? "" : String(v);
       return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };

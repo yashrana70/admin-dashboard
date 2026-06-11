@@ -11,6 +11,10 @@ import logo from "@/assets/saksham-logo.png";
 
 type RankRow = { user_id: string; name: string; avg: number; days: number };
 type Birthday = { user_id: string; name: string; dob: string; days_until: number };
+type DashboardEntry = { entry_date: string; japa_rounds: number | null };
+type UpcomingEvent = { id: string; title: string; event_date: string; event_type?: string | null; description?: string | null };
+
+type LeaderboardRow = { user_id: string; name: string; days_tracked?: number | null; avg_score?: number | null };
 
 const PRABHUPADA_QUOTES = [
   "Chant Hare Krishna and be happy.",
@@ -27,7 +31,7 @@ export default function Dashboard() {
   const [name, setName] = useState("Devotee");
   const [role, setRole] = useState<string>("devotee");
   const [stats, setStats] = useState({ entries: 0, totalRounds: 0 });
-  const [upcoming, setUpcoming] = useState<any[]>([]);
+  const [upcoming, setUpcoming] = useState<UpcomingEvent[]>([]);
   const [topDevotees, setTopDevotees] = useState<RankRow[]>([]);
   const [showRankings, setShowRankings] = useState(false);
   const [birthdays, setBirthdays] = useState<Birthday[]>([]);
@@ -44,15 +48,16 @@ export default function Dashboard() {
       if (roleData?.role) setRole(roleData.role);
 
       const today = new Date().toISOString().slice(0, 10);
-      const { data: entries } = await supabase.from("sadhna_entries")
+      const { data: entriesData } = await supabase.from("sadhna_entries")
         .select("japa_rounds, entry_date").eq("user_id", user.id);
-      if (entries) {
+      const entryRecords = (entriesData as DashboardEntry[]) || [];
+      if (entryRecords.length > 0) {
         setStats({
-          entries: entries.length,
-          totalRounds: entries.reduce((s, e) => s + (e.japa_rounds || 0), 0),
+          entries: entryRecords.length,
+          totalRounds: entryRecords.reduce((s, e) => s + (e.japa_rounds || 0), 0),
         });
         // 9 PM reminder if no entry for today
-        const filledToday = entries.some((e: any) => e.entry_date === today);
+        const filledToday = entryRecords.some(e => e.entry_date === today);
         const now = new Date();
         const after9pm = now.getHours() >= 21;
         const remindKey = `reminder_${today}`;
@@ -78,12 +83,12 @@ export default function Dashboard() {
       }
       const { data: ev } = await supabase.from("vaishnav_events")
         .select("*").gte("event_date", today).order("event_date").limit(5);
-      setUpcoming(ev || []);
+      setUpcoming((ev as UpcomingEvent[]) || []);
 
       // Fetch leaderboard via SECURITY DEFINER RPC (privacy-preserving aggregate)
-      const { data: lb } = await (supabase as any).rpc("get_devotee_leaderboard", { _limit: 5 });
+      const { data: lb } = await supabase.rpc<unknown>("get_devotee_leaderboard", { _limit: 5 });
       if (lb && Array.isArray(lb)) {
-        const ranked: RankRow[] = lb.map((r: any) => ({
+        const ranked: RankRow[] = (lb as LeaderboardRow[]).map((r) => ({
           user_id: r.user_id,
           name: r.name || "Devotee",
           days: Number(r.days_tracked) || 0,
@@ -96,10 +101,13 @@ export default function Dashboard() {
         }
       }
       // Upcoming birthdays (today + tomorrow)
-      const { data: bd } = await (supabase as any).rpc("get_upcoming_birthdays");
+      const { data: bd } = await supabase.rpc<unknown>("get_upcoming_birthdays");
       if (Array.isArray(bd) && bd.length > 0) {
-        const list: Birthday[] = bd.map((b: any) => ({
-          user_id: b.user_id, name: b.name, dob: b.dob, days_until: Number(b.days_until) || 0,
+        const list: Birthday[] = (bd as Array<{ user_id: string; name: string; dob: string; days_until?: string | number | null }>).map((b) => ({
+          user_id: b.user_id,
+          name: b.name,
+          dob: b.dob,
+          days_until: Number(b.days_until) || 0,
         }));
         setBirthdays(list);
         const bdKey = `birthdays_${today}`;
@@ -110,7 +118,7 @@ export default function Dashboard() {
       }
 
       // Schedule 9 PM reminder if before 9pm and not filled
-      const filledTodayCheck = entries?.some((e: any) => e.entry_date === today);
+      const filledTodayCheck = entryRecords.some((e) => e.entry_date === today);
       const nowMs = Date.now();
       const nineMs = new Date(); nineMs.setHours(21, 0, 0, 0);
       if (!filledTodayCheck && nowMs < nineMs.getTime()) {
@@ -148,7 +156,7 @@ export default function Dashboard() {
             <img src={logo} alt="Saksham" className="h-20 w-20 rounded-full ring-4 ring-primary-glow/40" />
             <div>
               <p className="text-sm opacity-80">Hare Krishna 🙏</p>
-              <h1 className="font-serif text-3xl md:text-4xl">Welcome, {name}</h1>
+              <h1 className="font-serif text-4xl mt-4 text-secondary">Saksham Connect Operator</h1>
               <p className="mt-1 text-xs md:text-sm opacity-90 italic">"Aapka Saksham Path"</p>
               <p className="mt-1 text-[11px] md:text-xs opacity-80">
                 🏛️ A Devotional Initiative under ISKCON Ayodhya

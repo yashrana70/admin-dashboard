@@ -30,8 +30,7 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   if (!user) {
-    window.location.href = "http://localhost:8080";
-    return null;
+    return <Navigate to="/auth" replace />;
   }
 
   // Hardcode the admin email just like App 1
@@ -39,15 +38,15 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return <>{children}</>;
   }
 
-  if (role === "devotee") {
+  if (role !== "admin" && role !== "operator" && role !== "volunteer") {
     // Redirect or block
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background text-center p-4">
         <h1 className="text-3xl font-serif mb-4 text-red-500">Access Denied</h1>
         <p className="text-muted-foreground mb-6">This dashboard is only for Admins, Operators, and Volunteers.</p>
-        <a href="http://localhost:8080" className="text-primary hover:underline">
-          Go back to Main App
-        </a>
+        <button onClick={() => supabase.auth.signOut()} className="text-primary hover:underline">
+          Sign out
+        </button>
       </div>
     );
   }

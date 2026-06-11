@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,11 +23,18 @@ export default function DailyTodoList() {
   const { user } = useAuth();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [title, setTitle] = useState("");
-  const [dueDate, setDueDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [dueDate, setDueDate] = useState(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [rungAlarms, setRungAlarms] = useState<Set<string>>(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem("spark_rung_alarms") || "[]"));
+    } catch {
+      return new Set();
+    }
+  });
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!user) return;
     const { data, error } = await supabase
       .from("todo_items")
@@ -37,15 +44,45 @@ export default function DailyTodoList() {
       .order("due_date", { ascending: true })
       .order("created_at", { ascending: false });
     if (error) toast.error(error.message);
-    setTodos((data as any) || []);
+    setTodos((data as Todo[]) || []);
     setLoading(false);
-  };
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
     setLoading(true);
     load();
-  }, [user]);
+  }, [load]);
+
+  // Alarm checker
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      todos.forEach(t => {
+        if (!t.completed && t.due_date) {
+          const due = new Date(t.due_date);
+          const diffSeconds = (now.getTime() - due.getTime()) / 1000;
+          const alarmKey = `${t.id}-${due.getTime()}`;
+          
+          if (diffSeconds >= 0 && !rungAlarms.has(alarmKey)) {
+            setRungAlarms(prev => {
+              const newSet = new Set(prev).add(alarmKey);
+              localStorage.setItem("spark_rung_alarms", JSON.stringify(Array.from(newSet)));
+              return newSet;
+            });
+            toast(t.title, { description: "Time to complete your task! 🪔", duration: 10000 });
+            try {
+              const audio = new Audio("/hare_krishna.mp3");
+              audio.play().catch(e => console.log("Audio play blocked", e));
+            } catch (error) {
+              console.warn("Audio playback error", error);
+            }
+          }
+        }
+      });
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [todos, rungAlarms]);
 
   const addTodo = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +92,7 @@ export default function DailyTodoList() {
     const { error } = await supabase.from("todo_items").insert({
       user_id: user.id,
       title: title.trim(),
-      due_date: dueDate || null,
+      due_date: dueDate ? new Date(dueDate).toISOString() : null,
     });
     setAdding(false);
     if (error) { toast.error(error.message); return; }
@@ -101,7 +138,7 @@ export default function DailyTodoList() {
             className="flex-1 min-w-[180px]"
           />
           <Input
-            type="date"
+            type="datetime-local"
             value={dueDate}
             onChange={e => setDueDate(e.target.value)}
             className="w-auto"
@@ -133,7 +170,7 @@ export default function DailyTodoList() {
                   </div>
                   {t.due_date && (
                     <div className="text-[11px] text-muted-foreground">
-                      {format(new Date(t.due_date), "EEE, dd MMM")}
+                      {format(new Date(t.due_date), "EEE, dd MMM yyyy hh:mm a")}
                     </div>
                   )}
                 </div>

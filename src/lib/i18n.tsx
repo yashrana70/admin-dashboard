@@ -3,7 +3,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 type Lang = "en" | "hi";
 
 const dict: Record<string, { en: string; hi: string }> = {
-  app_name: { en: "Saksham Sadhu Sang", hi: "सक्षम साधु संग" },
+  app_name: { en: "Saksham Connect", hi: "सक्षम कनेक्ट" },
   app_tagline: { en: "Aapka Saksham Path", hi: "आपका सक्षम पथ" },
   inspired_by: {
     en: "🌿 Inspired by the teachings of His Divine Grace A.C. Bhaktivedanta Swami Srila Prabhupada",
@@ -20,16 +20,18 @@ const dict: Record<string, { en: string; hi: string }> = {
   hindi: { en: "Hindi", hi: "हिन्दी" },
 
   nav_dashboard: { en: "Dashboard", hi: "डैशबोर्ड" },
-  nav_profile: { en: "My Profile", hi: "मेरी प्रोफ़ाइल" },
-  nav_submit: { en: "Submit Sadhna", hi: "साधना भरें" },
-  nav_reports: { en: "Sadhna Reports", hi: "साधना रिपोर्ट" },
-  nav_sadhna_cal: { en: "Sadhna Calendar", hi: "साधना कैलेंडर" },
-  nav_vaishnav_cal: { en: "Vaishnav Calendar", hi: "वैष्णव कैलेंडर" },
-  nav_todo: { en: "My To-Do List", hi: "मेरी कार्य सूची" },
+  nav_profile: { en: "Profiles & Hierarchy", hi: "प्रोफ़ाइल और पदानुक्रम" },
+  nav_users: { en: "All Users Database", hi: "सभी उपयोगकर्ता डेटाबेस" },
+  nav_attendance: { en: "Attendance", hi: "उपस्थिति" },
+  nav_sadhna: { en: "Sadhna Reports", hi: "साधना रिपोर्ट" },
+  nav_seva: { en: "Seva Tasks", hi: "सेवा कार्य" },
   nav_leaderboard: { en: "Leaderboard", hi: "लीडरबोर्ड" },
-  nav_hierarchy: { en: "Hierarchy", hi: "पदानुक्रम" },
-  nav_aarti: { en: "Aarti Library", hi: "आरती संग्रह" },
-  nav_admin: { en: "Admin", hi: "व्यवस्थापक" },
+  nav_events: { en: "Events", hi: "कार्यक्रम" },
+  nav_analytics: { en: "Admin Analytics", hi: "व्यवस्थापक एनालिटिक्स" },
+  nav_announcements: { en: "Announcements", hi: "घोषणाएं" },
+  nav_messages: { en: "Messages", hi: "संदेश" },
+  light_mode: { en: "Light Mode", hi: "लाइट मोड" },
+  dark_mode: { en: "Dark Mode", hi: "डार्क मोड" },
   sign_out: { en: "Sign out", hi: "साइन आउट" },
 
   aarti_title: { en: "ISKCON Aarti & PDF Library", hi: "इस्कॉन आरती एवं पीडीएफ संग्रह" },

@@ -33,22 +33,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (accessToken && refreshToken) {
       // Strip tokens from URL for security/cleanliness
       window.history.replaceState({}, document.title, window.location.pathname);
-      supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken }).then(({ data }) => {
-        setSession(data.session);
-        if (!initialized) {
-          initialized = true;
-          setLoading(false);
-        }
-      });
+      supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+        .then(({ data }) => {
+          setSession(data.session);
+        })
+        .catch(err => console.error("Session set error:", err))
+        .finally(() => {
+          if (!initialized) {
+            initialized = true;
+            setLoading(false);
+          }
+        });
     } else {
       // Initial session fetch
-      supabase.auth.getSession().then(({ data }) => {
-        setSession(data.session);
-        if (!initialized) {
-          initialized = true;
-          setLoading(false);
-        }
-      });
+      supabase.auth.getSession()
+        .then(({ data }) => {
+          setSession(data.session);
+        })
+        .catch(err => console.error("Session get error:", err))
+        .finally(() => {
+          if (!initialized) {
+            initialized = true;
+            setLoading(false);
+          }
+        });
     }
     return () => sub.subscription.unsubscribe();
   }, []);

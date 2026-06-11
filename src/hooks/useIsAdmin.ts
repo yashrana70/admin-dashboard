@@ -5,12 +5,16 @@ import { useAuth } from "@/lib/auth";
 export function useIsAdmin() {
   const { user } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isOperator, setIsOperator] = useState(false);
+  const [isVolunteer, setIsVolunteer] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
     if (!user) {
       setIsAdmin(false);
+      setIsOperator(false);
+      setIsVolunteer(false);
       setLoading(false);
       return;
     }
@@ -20,15 +24,18 @@ export function useIsAdmin() {
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id)
-        .eq("role", "admin")
         .maybeSingle();
       if (active) {
-        setIsAdmin(!!data);
+        setIsAdmin(data?.role === "admin");
+        setIsOperator(data?.role === "operator");
+        setIsVolunteer(data?.role === "volunteer");
         setLoading(false);
       }
     })();
     return () => { active = false; };
   }, [user]);
 
-  return { isAdmin, loading };
+  const isStaff = isAdmin || isOperator || isVolunteer;
+
+  return { isAdmin, isOperator, isVolunteer, isStaff, loading };
 }

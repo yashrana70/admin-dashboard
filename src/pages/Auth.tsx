@@ -210,8 +210,8 @@ export default function Auth() {
       <div className="w-full max-w-md relative">
         <div className="flex flex-col items-center mb-6">
           <img src={logo} alt="Saksham" className="h-24 w-24 rounded-full ring-4 ring-primary/30 shadow-elegant" />
-          <h1 className="font-serif text-4xl mt-4 text-secondary">Saksham Sadhu Sang</h1>
-          <p className="text-sm text-muted-foreground italic">"Aapka Saksham Path"</p>
+          <h1 className="font-serif text-4xl mt-4 text-secondary">Admin Dashboard</h1>
+          <p className="text-sm text-muted-foreground italic">"Saksham Connect"</p>
         </div>
 
         <Card className="glass-card border-0 rounded-2xl overflow-hidden">
@@ -387,7 +387,7 @@ export default function Auth() {
                 </Button>
                 <button
                   type="button"
-                  onClick={sendForgotOtp as any}
+                  onClick={() => sendForgotOtp()}
                   className="text-xs text-primary hover:underline w-full text-center"
                 >
                   Resend code
