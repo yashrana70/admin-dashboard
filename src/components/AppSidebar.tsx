@@ -20,7 +20,6 @@ const items = [
   { key: "Events", url: "/events", icon: CalendarDays },
   { key: "Leaderboard", url: "/leaderboard", icon: Trophy },
   { key: "Announcements", url: "/announcements", icon: BookOpen },
-  { key: "Admin Panel", url: "/admin", icon: Settings2 },
   { key: "My Profile", url: "/profile", icon: User },
 ];
 
@@ -63,6 +62,16 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              {isAdmin && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === "/admin"}>
+                    <NavLink to="/admin" end onClick={handleNav} className="flex items-center gap-3">
+                      <Settings2 className="h-4 w-4" />
+                      {!collapsed && <span>Admin Panel</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
