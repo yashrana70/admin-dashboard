@@ -65,15 +65,33 @@ export function AppSidebar() {
                 </SidebarMenuItem>
               ))}
               {isAdmin && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === "/admin"}>
-                    <NavLink to="/admin" end onClick={handleNav} className="flex items-center gap-3">
-                      <Settings2 className="h-4 w-4" />
-                      {!collapsed && <span>Admin Panel</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                <>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname === "/admin"}>
+                      <NavLink to="/admin" end onClick={handleNav} className="flex items-center gap-3">
+                        <Settings2 className="h-4 w-4" />
+                        {!collapsed && <span>Admin Panel</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <a href="https://sakshamsadhusangapp.vercel.app/admin" className="flex items-center gap-3 text-blue-600 font-semibold bg-blue-50 hover:bg-blue-100 rounded-md p-2">
+                        <Shield className="h-4 w-4" />
+                        {!collapsed && <span>Database Admin (App 1)</span>}
+                      </a>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </>
               )}
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <a href="https://sakshamsadhusangapp.vercel.app" className="flex items-center gap-3 text-purple-600 font-semibold bg-purple-50 hover:bg-purple-100 rounded-md p-2 mt-2">
+                    <Home className="h-4 w-4" />
+                    {!collapsed && <span>Back to Main App</span>}
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
