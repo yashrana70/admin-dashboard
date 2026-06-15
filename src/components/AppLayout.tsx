@@ -19,8 +19,14 @@ export default function AppLayout() {
             </div>
             <div className="ml-auto"><LanguageSwitcher compact /></div>
           </header>
-          <main className="flex-1 p-4 md:p-8 w-full mx-auto overflow-y-auto">
+          <main className="flex-1 p-4 md:p-8 w-full mx-auto overflow-y-auto relative">
             <Outlet />
+            <a 
+              href="https://sakshamsadhusangapp.vercel.app" 
+              className="md:hidden fixed bottom-6 right-6 z-50 flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white rounded-full p-4 shadow-xl transition-transform hover:scale-105"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            </a>
           </main>
           <footer className="border-t bg-card/40 backdrop-blur px-4 py-3 text-center text-[11px] text-muted-foreground space-y-0.5">
             <div>🌿 Inspired by the teachings of His Divine Grace A.C. Bhaktivedanta Swami Srila Prabhupada</div>
